@@ -4,8 +4,8 @@ const Product = require('../models/Product');
 const CartItemController = {
     // List all cart items for the logged-in user
     list(req, res) {
-        const userId = req.session.user.userId;
-        CartItems.getByUserId(userId, (err, cartItems) => {
+        const userid = req.session.user.userid;
+        CartItems.getByUserId(userid, (err, cartItems) => {
             if (err) return res.status(500).send('Error retrieving cart');
             res.render('cart', { cartItems, user: req.session.user });
         });
@@ -13,14 +13,14 @@ const CartItemController = {
 
     // Add a product to the cart
     add(req, res) {
-        const userId = req.session.user.userId;
-        const productId = parseInt(req.body.productId, 10);
-        Product.getByIds([productId], (err, products) => {
+        const userid = req.session.user.userid;
+        const productid = parseInt(req.body.productId, 10);
+        Product.getByIds([productid], (err, products) => {
             if (err || !products.length || products[0].paid) {
                 req.flash('error', 'Cannot add paid or invalid product');
                 return res.redirect('/products');
             }
-            CartItems.add(userId, productId, (err) => {
+            CartItems.add(userid, productid, (err) => {
                 if (err) req.flash('error', 'Could not add to cart');
                 else req.flash('success', 'Product added to cart');
                 res.redirect('/products');
@@ -30,13 +30,13 @@ const CartItemController = {
 
     // Remove a product from the cart
     remove(req, res) {
-        const userId = req.session.user.userId;
-        const productId = parseInt(req.body.productId, 10);
-        CartItems.remove(userId, productId, (err) => {
+        const userid = req.session.user.userid;
+        const productid = parseInt(req.body.productid, 10);
+        CartItems.remove(userid, productid, (err) => {
             if (req.headers['content-type'] === 'application/json') {
                 // AJAX/fetch request, return JSON
                 if (err) return res.status(500).json({ success: false, message: 'Could not remove from cart' });
-                return res.json({ success: true, productId });
+                return res.json({ success: true, productid });
             } else {
                 // Form POST, redirect
                 if (err) req.flash('error', 'Could not remove from cart');
@@ -48,8 +48,8 @@ const CartItemController = {
 
     // Clear all products from the cart
     clear(req, res) {
-        const userId = req.session.user.userId;
-        CartItems.clear(userId, (err) => {
+        const userid = req.session.user.userid;
+        CartItems.clear(userid, (err) => {
             if (req.headers['content-type'] === 'application/json') {
                 // AJAX/fetch request, return JSON
                 if (err) return res.status(500).json({ success: false, message: 'Could not clear cart' });
@@ -73,7 +73,7 @@ const CartItemController = {
 
         // Build invoice items from session cart
         const products = cart.map(item => ({
-            productId: item.productId,
+            productid: item.productid,
             productName: item.productName,
             quantity: Number(item.quantity) || 1,
             amount: (Number(item.price) || 0) * (Number(item.quantity) || 1)

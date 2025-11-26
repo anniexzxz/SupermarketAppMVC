@@ -1,23 +1,23 @@
 const db = require('../db');
 
 const CartItems = {
-    getByUserId(userId, callback) {
-        db.query('SELECT * FROM cart_items WHERE userId = ?', [userId], callback);
+    getByUserId(userid, callback) {
+        db.query('SELECT * FROM cart_items WHERE userid = ?', [userid], callback);
     },
-    add(userId, productId, callback) {
-        db.query('INSERT INTO cart_items (userId, productId) VALUES (?, ?)', [userId, productId], callback);
+    add(userid, productid, callback) {
+        db.query('INSERT INTO cart_items (userid, productid) VALUES (?, ?)', [userid, productid], callback);
     },
-    remove(userId, productId, callback) {
-        db.query('DELETE FROM cart_items WHERE userId = ? AND productId = ?', [userId, productId], callback);
+    remove(userid, productid, callback) {
+        db.query('DELETE FROM cart_items WHERE userid = ? AND productid = ?', [userid, productid], callback);
     },
-    removeBulk(userId, productIds, callback) {
-        if (!productIds || !productIds.length) return callback(null);
-        const placeholders = productIds.map(() => '?').join(',');
-        const sql = `DELETE FROM cart_items WHERE userId = ? AND productId IN (${placeholders})`;
-        db.query(sql, [userId, ...productIds], callback);
+    removeBulk(userid, productid, callback) {
+        if (!productid || !productid.length) return callback(null);
+        const placeholders = productid.map(() => '?').join(',');
+        const sql = `DELETE FROM cart_items WHERE userid = ? AND productid IN (${placeholders})`;
+        db.query(sql, [userid, ...productid], callback);
     },
-    clear(userId, callback) {
-        db.query('DELETE FROM cart_items WHERE userId = ?', [userId], callback);
+    clear(userid, callback) {
+        db.query('DELETE FROM cart_items WHERE userid = ?', [userid], callback);
     }
 };
 
