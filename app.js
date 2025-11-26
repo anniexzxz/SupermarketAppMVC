@@ -9,6 +9,7 @@ const app = express();
 // controllers (try both lowercase plural path requested and the actual filenames)
 let ProductController;
 let UserController;
+let CartItemController;
 try {
     ProductController = require('./controllers/productControllers');
 } catch (e) {
@@ -19,12 +20,19 @@ try {
 } catch (e) {
     UserController = require('./controllers/UserController');
 }
+try {
+    CartItemController = require('./controllers/CartItemControllers');
+} catch (e) {
+    CartItemController = require('./controllers/CartItemController');
+}
 
 // If a controller wasn't found above this will throw early so errors are obvious
 if (!ProductController) throw new Error('ProductController not found');
 if (!UserController) throw new Error('UserController not found');
+if (!CartItemController) throw new Error('CartItemController not found');
 
 const db = require('./db'); // used for authentication (no direct connection code here)
+const CartItemsController = require('./controllers/CartItemController');
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
@@ -245,6 +253,29 @@ app.post('/add-to-cart/:id', checkAuthenticated, (req, res) => {
 app.get('/cart', checkAuthenticated, (req, res) => {
     const cart = req.session.cart || [];
     res.render('cart', { cart, user: req.session.user });
+});
+
+
+// Cart routes
+app.get('/cart', checkAuthenticated, CartItemController.list);
+app.post('/cart/add', checkAuthenticated, CartItemController.add);
+app.post('/cart/remove', checkAuthenticated, CartItemController.remove);
+app.post('/cart/clear', checkAuthenticated, CartItemController.clear);
+app.post('/cart/checkout', checkAuthenticated, CartItemController.checkout);
+
+// render invoice page (add this near other routes, after CartItemController.checkout route)
+app.get('/invoice', checkAuthenticated, (req, res) => {
+    const invoice = req.session.invoice;
+    if (!invoice || !Array.isArray(invoice.products) || invoice.products.length === 0) {
+        req.flash('error', 'No invoice available.');
+        return res.redirect('/cart');
+    }
+
+    res.render('invoice', {
+        user: req.session.user || null,
+        products: invoice.products,
+        total: invoice.total || 0
+    });
 });
 
 // Logout
