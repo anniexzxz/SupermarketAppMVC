@@ -46,7 +46,7 @@
       <tbody>
         <% for(let i=0; i < products.length; i++) { %>
           <tr>
-            <td><a href="/product/<%= products[i].id %>" ><%= products[i].productName %></a></td>
+            <td><a href="/product/<%= products[i].productid %>" ><%= products[i].productName %></a></td>
             <td><img src = "images/<%= products[i].image %>" width="20%"></td>
             <td><%= products[i].quantity %></td>
             <td>$<%= products[i].price.toFixed(2) %></td>
@@ -70,8 +70,8 @@
             </td>
 
             <td>
-                <form action="/add-to-cart/<%= products[i].id %>" method="POST">
-                  <input type="hidden" name="quantity" id="quantity-<%= products[i].id %>" value="1">
+                <form action="/add-to-cart/<%= products[i].productid %>" method="POST">
+                  <input type="hidden" name="quantity" id="quantity-<%= products[i].productid %>" value="1">
                   <button type="submit" class="btn btn-primary mt-3">Buy</button>
                 </form>
             </td>
