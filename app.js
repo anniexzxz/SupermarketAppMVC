@@ -226,8 +226,8 @@ app.post('/login', (req, res) => {
 
 // Add to cart (uses model to fetch product)
 app.post('/add-to-cart/:id', checkAuthenticated, (req, res) => {
-    const productId = parseInt(req.params.id);
-    const quantity = parseInt(req.body.quantity) || 1;
+    const productId = parseInt(req.params.id, 10);
+    const quantity = parseInt(req.body.quantity, 10) || 1;
     const Product = require('./models/Product');
     Product.getById(productId, (err, product) => {
         if (err) return res.status(500).send('Error fetching product');
@@ -238,7 +238,7 @@ app.post('/add-to-cart/:id', checkAuthenticated, (req, res) => {
             existingItem.quantity += quantity;
         } else {
             req.session.cart.push({
-                productId: product.id,
+                productId: product.productid,
                 productName: product.productName,
                 price: product.price,
                 quantity,
