@@ -19,14 +19,14 @@ const User = {
 
     // Create a new user — user: { username, email, password, address, contact, role }
     create(user, callback) {
-        const sql = 'INSERT INTO users (username, email, password, address, contact, role) VALUES (?, ?, ?, ?, ?, ?)';
+        const sql = 'INSERT INTO users (username, email, password, address, contact, role) VALUES (?, ?, SHA1(?), ?, ?, ?)';
         const params = [user.username, user.email, user.password, user.address || '', user.contact || '', user.role || 'user'];
         db.query(sql, params, (err, result) => callback(err, result));
     },
 
     // Update an existing user by ID — user: { username, email, password, address, contact, role }
     update(userid, user, callback) {
-        const sql = 'UPDATE users SET username = ?, email = ?, password = ?, address = ?, contact = ?, role = ? WHERE userid = ?';
+        const sql = 'UPDATE users SET username = ?, email = ?, password = SHA1(?), address = ?, contact = ?, role = ? WHERE userid = ?';
         const params = [user.username, user.email, user.password, user.address || '', user.contact || '', user.role || 'user', userid];
         db.query(sql, params, (err, result) => callback(err, result));
     },
@@ -110,4 +110,3 @@ const User = {
 };
 
 module.exports = User;
-// ...existing code...
