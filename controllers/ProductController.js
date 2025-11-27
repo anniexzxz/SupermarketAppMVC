@@ -61,23 +61,37 @@ const ProductController = {
         const quantity = parseInt(req.body.quantity, 10);
         const price = parseFloat(req.body.price);
         const currentImage = req.body.currentImage || '';
-        const image = req.file ? req.file.filename : (req.body.image || currentImage || '');
+        const uploadedImage = req.file ? req.file.filename : (req.body.image || '').trim();
         const product = {
             productName,
             quantity: Number.isNaN(quantity) ? 0 : quantity,
             price: Number.isNaN(price) ? 0 : price,
-            image
+            image: uploadedImage || currentImage
         };
 
-        // Support both model method names: update or edit
-        const updater = (typeof Product.update === 'function') ? Product.update : Product.edit;
+        const proceedUpdate = finalProduct => {
+            // Support both model method names: update or edit
+            const updater = (typeof Product.update === 'function') ? Product.update : Product.edit;
 
-        updater.call(Product, productid, product, (err, result) => {
-            if (err) {
-                return res.status(500).render('updateProduct', { product: Object.assign({ productid }, product), error: 'Failed to update product.', user: req.session.user });
-            }
-            res.redirect('/inventory');
-        });
+            updater.call(Product, productid, finalProduct, (err, result) => {
+                if (err) {
+                    return res.status(500).render('updateProduct', { product: Object.assign({ productid }, finalProduct), error: 'Failed to update product.', user: req.session.user });
+                }
+                res.redirect('/inventory');
+            });
+        };
+
+        // If no image provided anywhere, fall back to stored image so it isn't cleared
+        if (!product.image) {
+            return Product.getById(productid, (err, existing) => {
+                if (err || !existing) {
+                    return res.status(500).render('updateProduct', { product: Object.assign({ productid }, product), error: 'Failed to load product image.', user: req.session.user });
+                }
+                proceedUpdate(Object.assign({}, product, { image: existing.image }));
+            });
+        }
+
+        proceedUpdate(product);
     },
 
     // Delete a product by ID (redirects back to inventory)
