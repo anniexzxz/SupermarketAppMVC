@@ -32,11 +32,17 @@ const ProductController = {
 
     // Add a product (handles form POST; redirects to inventory on success)
     create(req, res) {
+        // Support both legacy form field names and the current ones
+        const productName = req.body.productName || req.body.name || '';
+        const quantity = parseInt(req.body.quantity, 10);
+        const price = parseFloat(req.body.price);
+        const image = req.file ? req.file.filename : (req.body.image || req.body.currentImage || '');
+
         const product = {
-            productName: req.body.productName,
-            quantity: parseInt(req.body.quantity, 10) || 0,
-            price: parseFloat(req.body.price) || 0,
-            image: req.file ? req.file.filename : (req.body.image || ''),
+            productName,
+            quantity: Number.isNaN(quantity) ? 0 : quantity,
+            price: Number.isNaN(price) ? 0 : price,
+            image,
             user_id: req.session.user ? req.session.user.userid : null
         };
 
@@ -51,11 +57,16 @@ const ProductController = {
     // Update a product by ID (POST /editProduct/:id) - admin only
     update(req, res) {
         const productid = req.params.id;
+        const productName = req.body.productName || req.body.name || '';
+        const quantity = parseInt(req.body.quantity, 10);
+        const price = parseFloat(req.body.price);
+        const currentImage = req.body.currentImage || '';
+        const image = req.file ? req.file.filename : (req.body.image || currentImage || '');
         const product = {
-            productName: req.body.productName,
-            quantity: parseInt(req.body.quantity, 10) || 0,
-            price: parseFloat(req.body.price) || 0,
-            image: req.file ? req.file.filename : (req.body.image || '')
+            productName,
+            quantity: Number.isNaN(quantity) ? 0 : quantity,
+            price: Number.isNaN(price) ? 0 : price,
+            image
         };
 
         // Support both model method names: update or edit
@@ -82,4 +93,4 @@ const ProductController = {
 };
 
 module.exports = ProductController;
-// ...existing code...
+

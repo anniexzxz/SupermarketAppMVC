@@ -31,6 +31,11 @@ const Product = {
         db.query(sql, params, (err, result) => callback(err, result));
     },
 
+    // Alias to keep controller code flexible
+    update(productid, product, callback) {
+        return this.edit(productid, product, callback);
+    },
+
     // Delete a product by ID
     delete(productid, callback) {
         const sql = 'DELETE FROM products WHERE productid = ?';
@@ -39,4 +44,3 @@ const Product = {
 };
 
 module.exports = Product;
-// ...existing code...
