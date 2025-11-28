@@ -167,7 +167,7 @@ app.get('/user/:id', checkAuthenticated, (req, res, next) => {
 
 // Registration form
 app.get('/register', (req, res) => {
-    res.render('register', { messages: req.flash('error'), formData: req.flash('formData')[0] });
+    res.render('register', { user: req.session.user || null, messages: req.flash('error'), formData: req.flash('formData')[0] });
 });
 
 // Registration POST - delegate to user controller (handles DB via model)
@@ -201,7 +201,7 @@ app.get('/deleteUser/:id', checkAuthenticated, checkAdmin, (req, res, next) => {
 
 // Login routes (authentication). Uses db.query from ./db (no direct connection creation in this file)
 app.get('/login', (req, res) => {
-    res.render('login', { messages: req.flash('success'), errors: req.flash('error') });
+    res.render('login', { user: req.session.user || null, messages: req.flash('success'), errors: req.flash('error') });
 });
 app.post('/login', (req, res) => {
     const { email, password } = req.body;
