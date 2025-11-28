@@ -40,6 +40,18 @@ const Product = {
     delete(productid, callback) {
         const sql = 'DELETE FROM products WHERE productid = ?';
         db.query(sql, [productid], (err, result) => callback(err, result));
+    },
+
+    // Decrease quantity atomically if enough stock remains
+    decreaseQuantity(productid, amount, callback) {
+        const sql = 'UPDATE products SET quantity = quantity - ? WHERE productid = ? AND quantity >= ?';
+        db.query(sql, [amount, productid, amount], (err, result) => {
+            if (err) return callback(err);
+            if (result.affectedRows === 0) {
+                return callback(new Error('Insufficient stock'));
+            }
+            callback(null, result);
+        });
     }
 };
 

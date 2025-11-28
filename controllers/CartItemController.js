@@ -4,63 +4,69 @@ const Product = require('../models/Product');
 const CartItemController = {
     // List all cart items for the logged-in user
     list(req, res) {
-        const userid = req.session.user.userid;
-        CartItems.getByUserId(userid, (err, cartItems) => {
-            if (err) return res.status(500).send('Error retrieving cart');
-            res.render('cart', { cartItems, user: req.session.user });
-        });
+        const cart = req.session.cart || [];
+        const total = cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
+        res.render('cart', { cart, total, user: req.session.user });
     },
 
     // Add a product to the cart
     add(req, res) {
-        const userid = req.session.user.userid;
-        const productid = parseInt(req.body.productId, 10);
-        Product.getByIds([productid], (err, products) => {
-            if (err || !products.length || products[0].paid) {
-                req.flash('error', 'Cannot add paid or invalid product');
-                return res.redirect('/products');
+        const productId = parseInt(req.body.productId || req.params.id, 10);
+        const quantity = Math.max(1, parseInt(req.body.quantity, 10) || 1);
+
+        Product.getById(productId, (err, product) => {
+            if (err || !product) {
+                req.flash('error', 'Product not found');
+                return res.redirect('/shopping');
             }
-            CartItems.add(userid, productid, (err) => {
-                if (err) req.flash('error', 'Could not add to cart');
-                else req.flash('success', 'Product added to cart');
-                res.redirect('/products');
-            });
+
+            if (!req.session.cart) req.session.cart = [];
+            const existing = req.session.cart.find(item => item.productId === productId);
+            if (existing) {
+                existing.quantity += quantity;
+            } else {
+                req.session.cart.push({
+                    productId: product.productid,
+                    productName: product.productName,
+                    price: Number(product.price),
+                    quantity,
+                    image: product.image
+                });
+            }
+
+            req.flash('success', 'Product added to cart');
+            return res.redirect('/cart');
         });
     },
 
     // Remove a product from the cart
     remove(req, res) {
-        const userid = req.session.user.userid;
-        const productid = parseInt(req.body.productid, 10);
-        CartItems.remove(userid, productid, (err) => {
-            if (req.headers['content-type'] === 'application/json') {
-                // AJAX/fetch request, return JSON
-                if (err) return res.status(500).json({ success: false, message: 'Could not remove from cart' });
-                return res.json({ success: true, productid });
-            } else {
-                // Form POST, redirect
-                if (err) req.flash('error', 'Could not remove from cart');
-                else req.flash('success', 'Product removed from cart');
-                res.redirect('/products');
-            }
-        });
+        const productId = parseInt(req.body.productId, 10);
+        req.session.cart = (req.session.cart || []).filter(item => item.productId !== productId);
+        req.flash('success', 'Product removed from cart');
+        return res.redirect('/cart');
+    },
+
+    // Update quantity for a product in the cart
+    update(req, res) {
+        const productId = parseInt(req.body.productId, 10);
+        const quantity = Math.max(1, parseInt(req.body.quantity, 10) || 1);
+
+        const cart = req.session.cart || [];
+        const item = cart.find(ci => ci.productId === productId);
+        if (item) {
+            item.quantity = quantity;
+        }
+        req.session.cart = cart;
+        req.flash('success', 'Cart updated');
+        return res.redirect('/cart');
     },
 
     // Clear all products from the cart
     clear(req, res) {
-        const userid = req.session.user.userid;
-        CartItems.clear(userid, (err) => {
-            if (req.headers['content-type'] === 'application/json') {
-                // AJAX/fetch request, return JSON
-                if (err) return res.status(500).json({ success: false, message: 'Could not clear cart' });
-                return res.json({ success: true });
-            } else {
-                // Form POST, redirect
-                if (err) req.flash('error', 'Could not clear cart');
-                else req.flash('success', 'Cart cleared');
-                res.redirect('/products');
-            }
-        });
+        req.session.cart = [];
+        req.flash('success', 'Cart cleared');
+        return res.redirect('/cart');
     },
 
     // Checkout: build invoice from session cart, clear cart and redirect to /invoice
@@ -71,24 +77,64 @@ const CartItemController = {
             return res.redirect('/cart');
         }
 
-        // Build invoice items from session cart
-        const products = cart.map(item => ({
-            productid: item.productid,
-            productName: item.productName,
-            quantity: Number(item.quantity) || 1,
-            amount: (Number(item.price) || 0) * (Number(item.quantity) || 1)
-        }));
+        // helper to run async tasks sequentially
+        const runSeries = (items, worker, done) => {
+            let index = 0;
+            const next = () => {
+                if (index >= items.length) return done();
+                worker(items[index], (err) => {
+                    if (err) return done(err);
+                    index += 1;
+                    next();
+                });
+            };
+            next();
+        };
 
-        const total = products.reduce((sum, p) => sum + (p.amount || 0), 0);
+        // first validate stock availability
+        runSeries(cart, (item, cb) => {
+            Product.getById(item.productId, (err, product) => {
+                if (err || !product) return cb(new Error('Product not found'));
+                if (Number(product.quantity) < Number(item.quantity)) {
+                    return cb(new Error(`Insufficient stock for ${product.productName}`));
+                }
+                cb();
+            });
+        }, (validateErr) => {
+            if (validateErr) {
+                req.flash('error', validateErr.message);
+                return res.redirect('/cart');
+            }
 
-        // store invoice in session so GET /invoice can render it
-        req.session.invoice = { products, total, createdAt: new Date() };
+            // apply stock deductions
+            runSeries(cart, (item, cb) => {
+                Product.decreaseQuantity(item.productId, Number(item.quantity), cb);
+            }, (updateErr) => {
+                if (updateErr) {
+                    req.flash('error', 'Could not update stock during checkout. Please try again.');
+                    return res.redirect('/cart');
+                }
 
-        // clear cart
-        req.session.cart = [];
+                // Build invoice items from session cart
+                const products = cart.map(item => ({
+                    productid: item.productId,
+                    productName: item.productName,
+                    quantity: Number(item.quantity) || 1,
+                    amount: (Number(item.price) || 0) * (Number(item.quantity) || 1)
+                }));
 
-        // redirect to invoice page
-        return res.redirect('/invoice');
+                const total = products.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+                // store invoice in session so GET /invoice can render it
+                req.session.invoice = { products, total, createdAt: new Date() };
+
+                // clear cart
+                req.session.cart = [];
+
+                // redirect to invoice page
+                return res.redirect('/invoice');
+            });
+        });
     }
 };
 

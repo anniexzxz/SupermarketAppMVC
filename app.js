@@ -226,39 +226,15 @@ app.post('/login', (req, res) => {
 
 // Add to cart (uses model to fetch product)
 app.post('/add-to-cart/:id', checkAuthenticated, (req, res) => {
-    const productId = parseInt(req.params.id, 10);
-    const quantity = parseInt(req.body.quantity, 10) || 1;
-    const Product = require('./models/Product');
-    Product.getById(productId, (err, product) => {
-        if (err) return res.status(500).send('Error fetching product');
-        if (!product) return res.status(404).send('Product not found');
-        if (!req.session.cart) req.session.cart = [];
-        const existingItem = req.session.cart.find(item => item.productId === productId);
-        if (existingItem) {
-            existingItem.quantity += quantity;
-        } else {
-            req.session.cart.push({
-                productId: product.productid,
-                productName: product.productName,
-                price: product.price,
-                quantity,
-                image: product.image
-            });
-        }
-        res.redirect('/cart');
-    });
+    // Reuse cart controller logic so quantities and totals stay consistent
+    req.body.productId = req.params.id;
+    CartItemController.add(req, res);
 });
-
-// Cart
-app.get('/cart', checkAuthenticated, (req, res) => {
-    const cart = req.session.cart || [];
-    res.render('cart', { cart, user: req.session.user });
-});
-
 
 // Cart routes
 app.get('/cart', checkAuthenticated, CartItemController.list);
 app.post('/cart/add', checkAuthenticated, CartItemController.add);
+app.post('/cart/update', checkAuthenticated, CartItemController.update);
 app.post('/cart/remove', checkAuthenticated, CartItemController.remove);
 app.post('/cart/clear', checkAuthenticated, CartItemController.clear);
 app.post('/cart/checkout', checkAuthenticated, CartItemController.checkout);
