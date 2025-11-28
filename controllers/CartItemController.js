@@ -6,7 +6,13 @@ const CartItemController = {
     list(req, res) {
         const cart = req.session.cart || [];
         const total = cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
-        res.render('cart', { cart, total, user: req.session.user });
+        res.render('cart', {
+            cart,
+            total,
+            user: req.session.user,
+            messages: req.flash('success'),
+            errors: req.flash('error')
+        });
     },
 
     // Add a product to the cart
@@ -17,20 +23,29 @@ const CartItemController = {
         Product.getById(productId, (err, product) => {
             if (err || !product) {
                 req.flash('error', 'Product not found');
-                return res.redirect('/shopping');
+                return res.redirect('/cart');
             }
 
             if (!req.session.cart) req.session.cart = [];
             const existing = req.session.cart.find(item => item.productId === productId);
+            const currentQty = existing ? Number(existing.quantity) : 0;
+            const desiredQty = currentQty + quantity;
+
+            if (desiredQty > Number(product.quantity)) {
+                req.flash('error', `Only ${product.quantity} in stock for ${product.productName}`);
+                return res.redirect('/cart');
+            }
+
             if (existing) {
-                existing.quantity += quantity;
+                existing.quantity = desiredQty;
             } else {
                 req.session.cart.push({
                     productId: product.productid,
                     productName: product.productName,
                     price: Number(product.price),
                     quantity,
-                    image: product.image
+                    image: product.image,
+                    availableQuantity: Number(product.quantity)
                 });
             }
 
@@ -54,12 +69,28 @@ const CartItemController = {
 
         const cart = req.session.cart || [];
         const item = cart.find(ci => ci.productId === productId);
-        if (item) {
-            item.quantity = quantity;
+        if (!item) {
+            req.flash('error', 'Item not found in cart');
+            return res.redirect('/cart');
         }
-        req.session.cart = cart;
-        req.flash('success', 'Cart updated');
-        return res.redirect('/cart');
+
+        Product.getById(productId, (err, product) => {
+            if (err || !product) {
+                req.flash('error', 'Product not found');
+                return res.redirect('/cart');
+            }
+
+            if (quantity > Number(product.quantity)) {
+                req.flash('error', `Only ${product.quantity} in stock for ${product.productName}`);
+                return res.redirect('/cart');
+            }
+
+            item.quantity = quantity;
+            item.availableQuantity = Number(product.quantity);
+            req.session.cart = cart;
+            req.flash('success', 'Cart updated');
+            return res.redirect('/cart');
+        });
     },
 
     // Clear all products from the cart
