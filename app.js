@@ -10,6 +10,7 @@ const app = express();
 let ProductController;
 let UserController;
 let CartItemController;
+let OrderHistoryController;
 try {
     ProductController = require('./controllers/productControllers');
 } catch (e) {
@@ -25,11 +26,17 @@ try {
 } catch (e) {
     CartItemController = require('./controllers/CartItemController');
 }
+try {
+    OrderHistoryController = require('./controllers/orderHistoryControllers');
+} catch (e) {
+    OrderHistoryController = require('./controllers/OrderHistoryController');
+}
 
 // If a controller wasn't found above this will throw early so errors are obvious
 if (!ProductController) throw new Error('ProductController not found');
 if (!UserController) throw new Error('UserController not found');
 if (!CartItemController) throw new Error('CartItemController not found');
+if (!OrderHistoryController) throw new Error('OrderHistoryController not found');
 
 const db = require('./db'); // used for authentication (no direct connection code here)
 const CartItemsController = require('./controllers/CartItemController');
@@ -299,6 +306,35 @@ app.get('/invoice', checkAuthenticated, (req, res) => {
 // Logout
 app.get('/logout', (req, res) => {
     req.session.destroy(() => res.redirect('/'));
+});
+
+// Order history routes
+app.get('/orderHistory', checkAuthenticated, (req, res, next) => {
+    OrderHistoryController.list(req, res, next);
+});
+
+app.get('/orderHistory/:id', checkAuthenticated, (req, res, next) => {
+    OrderHistoryController.show(req, res, next);
+});
+
+app.post('/orderHistory', checkAuthenticated, (req, res, next) => {
+    OrderHistoryController.create(req, res, next);
+});
+
+app.post('/orderHistory/:id', checkAuthenticated, (req, res, next) => {
+    OrderHistoryController.update(req, res, next);
+});
+
+app.post('/orderHistory/:id/delete', checkAuthenticated, (req, res, next) => {
+    OrderHistoryController.delete(req, res, next);
+});
+
+app.post('/orderHistory/:id/review', checkAuthenticated, (req, res, next) => {
+    OrderHistoryController.review(req, res, next);
+});
+
+app.post('/orderHistory/:id/rate', checkAuthenticated, (req, res, next) => {
+    OrderHistoryController.rate(req, res, next);
 });
 
 // Fallback: start server
