@@ -1,5 +1,6 @@
 const CartItems = require('../models/CartItem');
 const Product = require('../models/Product');
+const OrderHistory = require('../models/OrderHistory');
 
 const CartItemController = {
     // List all cart items for the logged-in user
@@ -103,9 +104,16 @@ const CartItemController = {
     // Checkout: build invoice from session cart, clear cart and redirect to /invoice
     checkout(req, res) {
         const cart = req.session.cart || [];
+        const currentUser = req.session.user;
+
         if (!cart.length) {
             req.flash('error', 'Cart is empty');
             return res.redirect('/cart');
+        }
+
+        if (!currentUser) {
+            req.flash('error', 'You must be logged in to checkout.');
+            return res.redirect('/login');
         }
 
         // helper to run async tasks sequentially
@@ -146,24 +154,41 @@ const CartItemController = {
                     return res.redirect('/cart');
                 }
 
-                // Build invoice items from session cart
-                const products = cart.map(item => ({
-                    productid: item.productId,
-                    productName: item.productName,
-                    quantity: Number(item.quantity) || 1,
-                    amount: (Number(item.price) || 0) * (Number(item.quantity) || 1)
-                }));
+                // Persist order history entries
+                runSeries(cart, (item, cb) => {
+                    const orderData = {
+                        userId: currentUser.userid,
+                        productId: item.productId,
+                        quantity: Number(item.quantity) || 1,
+                        price: (Number(item.price) || 0) * (Number(item.quantity) || 1),
+                        order_date: new Date()
+                    };
+                    OrderHistory.add(orderData, cb);
+                }, (orderErr) => {
+                    if (orderErr) {
+                        req.flash('error', 'Checkout succeeded but failed to record order history. Please contact support.');
+                        return res.redirect('/cart');
+                    }
 
-                const total = products.reduce((sum, p) => sum + (p.amount || 0), 0);
+                    // Build invoice items from session cart
+                    const products = cart.map(item => ({
+                        productid: item.productId,
+                        productName: item.productName,
+                        quantity: Number(item.quantity) || 1,
+                        amount: (Number(item.price) || 0) * (Number(item.quantity) || 1)
+                    }));
 
-                // store invoice in session so GET /invoice can render it
-                req.session.invoice = { products, total, createdAt: new Date() };
+                    const total = products.reduce((sum, p) => sum + (p.amount || 0), 0);
 
-                // clear cart
-                req.session.cart = [];
+                    // store invoice in session so GET /invoice can render it
+                    req.session.invoice = { products, total, createdAt: new Date() };
 
-                // redirect to invoice page
-                return res.redirect('/invoice');
+                    // clear cart
+                    req.session.cart = [];
+
+                    // redirect to invoice page
+                    return res.redirect('/invoice');
+                });
             });
         });
     }
