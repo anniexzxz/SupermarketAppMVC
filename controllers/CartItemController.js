@@ -5,19 +5,32 @@ const OrderHistory = require('../models/OrderHistory');
 const CartItemController = {
     // List all cart items for the logged-in user
     list(req, res) {
-        const cart = req.session.cart || [];
-        const total = cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
-        res.render('cart', {
-            cart,
-            total,
-            user: req.session.user,
-            messages: req.flash('success'),
-            errors: req.flash('error')
+        const currentUser = req.session.user;
+        CartItems.listByUser(currentUser.userid, (err, items) => {
+            if (err) {
+                return res.status(500).render('cart', {
+                    cart: [],
+                    total: 0,
+                    user: currentUser,
+                    messages: req.flash('success'),
+                    errors: [ 'Failed to load cart.' ]
+                });
+            }
+            const cart = items || [];
+            const total = cart.reduce((sum, item) => sum + (Number(item.price) * Number(item.quantity || 1)), 0);
+            res.render('cart', {
+                cart,
+                total,
+                user: currentUser,
+                messages: req.flash('success'),
+                errors: req.flash('error')
+            });
         });
     },
 
     // Add a product to the cart
     add(req, res) {
+        const currentUser = req.session.user;
         const productId = parseInt(req.body.productId || req.params.id, 10);
         const quantity = Math.max(1, parseInt(req.body.quantity, 10) || 1);
 
@@ -27,53 +40,52 @@ const CartItemController = {
                 return res.redirect('/cart');
             }
 
-            if (!req.session.cart) req.session.cart = [];
-            const existing = req.session.cart.find(item => item.productId === productId);
-            const currentQty = existing ? Number(existing.quantity) : 0;
-            const desiredQty = currentQty + quantity;
+            CartItems.getByUserAndProduct(currentUser.userid, productId, (findErr, existing) => {
+                const currentQty = existing ? Number(existing.quantity) : 0;
+                const desiredQty = currentQty + quantity;
 
-            if (desiredQty > Number(product.quantity)) {
-                req.flash('error', `Only ${product.quantity} in stock for ${product.productName}`);
-                return res.redirect('/cart');
-            }
+                if (desiredQty > Number(product.quantity)) {
+                    req.flash('error', `Only ${product.quantity} in stock for ${product.productName}`);
+                    return res.redirect('/cart');
+                }
 
-            if (existing) {
-                existing.quantity = desiredQty;
-            } else {
-                req.session.cart.push({
-                    productId: product.productid,
-                    productName: product.productName,
-                    price: Number(product.price),
-                    quantity,
-                    image: product.image,
-                    availableQuantity: Number(product.quantity)
-                });
-            }
+                const done = (dbErr) => {
+                    if (dbErr) {
+                        console.error(dbErr);
+                        req.flash('error', 'Could not add to cart');
+                    } else {
+                        req.flash('success', 'Product added to cart');
+                    }
+                    return res.redirect('/cart');
+                };
 
-            req.flash('success', 'Product added to cart');
-            return res.redirect('/cart');
+                if (existing) {
+                    return CartItems.updateQuantity(currentUser.userid, productId, desiredQty, done);
+                }
+                return CartItems.add(currentUser.userid, productId, desiredQty, done);
+            });
         });
     },
 
     // Remove a product from the cart
     remove(req, res) {
+        const currentUser = req.session.user;
         const productId = parseInt(req.body.productId, 10);
-        req.session.cart = (req.session.cart || []).filter(item => item.productId !== productId);
-        req.flash('success', 'Product removed from cart');
-        return res.redirect('/cart');
+        CartItems.remove(currentUser.userid, productId, (err) => {
+            if (err) {
+                req.flash('error', 'Failed to remove item');
+            } else {
+                req.flash('success', 'Product removed from cart');
+            }
+            return res.redirect('/cart');
+        });
     },
 
     // Update quantity for a product in the cart
     update(req, res) {
+        const currentUser = req.session.user;
         const productId = parseInt(req.body.productId, 10);
         const quantity = Math.max(1, parseInt(req.body.quantity, 10) || 1);
-
-        const cart = req.session.cart || [];
-        const item = cart.find(ci => ci.productId === productId);
-        if (!item) {
-            req.flash('error', 'Item not found in cart');
-            return res.redirect('/cart');
-        }
 
         Product.getById(productId, (err, product) => {
             if (err || !product) {
@@ -86,35 +98,50 @@ const CartItemController = {
                 return res.redirect('/cart');
             }
 
-            item.quantity = quantity;
-            item.availableQuantity = Number(product.quantity);
-            req.session.cart = cart;
-            req.flash('success', 'Cart updated');
-            return res.redirect('/cart');
+            CartItems.updateQuantity(currentUser.userid, productId, quantity, (updateErr) => {
+                if (updateErr) {
+                    req.flash('error', 'Failed to update cart');
+                } else {
+                    req.flash('success', 'Cart updated');
+                }
+                return res.redirect('/cart');
+            });
         });
     },
 
     // Clear all products from the cart
     clear(req, res) {
-        req.session.cart = [];
-        req.flash('success', 'Cart cleared');
-        return res.redirect('/cart');
+        const currentUser = req.session.user;
+        CartItems.clear(currentUser.userid, (err) => {
+            if (err) {
+                req.flash('error', 'Failed to clear cart');
+            } else {
+                req.flash('success', 'Cart cleared');
+            }
+            return res.redirect('/cart');
+        });
     },
 
     // Checkout: build invoice from session cart, clear cart and redirect to /invoice
     checkout(req, res) {
-        const cart = req.session.cart || [];
         const currentUser = req.session.user;
-
-        if (!cart.length) {
-            req.flash('error', 'Cart is empty');
-            return res.redirect('/cart');
-        }
 
         if (!currentUser) {
             req.flash('error', 'You must be logged in to checkout.');
             return res.redirect('/login');
         }
+
+        CartItems.listByUser(currentUser.userid, (loadErr, items) => {
+            if (loadErr) {
+                req.flash('error', 'Unable to load cart for checkout.');
+                return res.redirect('/cart');
+            }
+
+            const cart = items || [];
+            if (!cart.length) {
+                req.flash('error', 'Cart is empty');
+                return res.redirect('/cart');
+            }
 
         // helper to run async tasks sequentially
         const runSeries = (items, worker, done) => {
@@ -183,13 +210,14 @@ const CartItemController = {
                     // store invoice in session so GET /invoice can render it
                     req.session.invoice = { products, total, createdAt: new Date() };
 
-                    // clear cart
-                    req.session.cart = [];
+                    // clear cart in DB
+                    CartItems.clear(currentUser.userid, () => {});
 
                     // redirect to invoice page
                     return res.redirect('/invoice');
                 });
             });
+        });
         });
     }
 };

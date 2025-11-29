@@ -29,6 +29,19 @@ const CartItems = {
         db.query(sql, [userId], callback);
     },
 
+    // Fetch a single cart item for a user + product
+    getByUserAndProduct(userId, productId, callback) {
+        const sql = `
+            SELECT ci.cart_itemsId, ci.userId, ci.productId, ci.quantity, ci.created_at,
+                   p.productName, p.price, p.image, (ci.quantity * p.price) AS subtotal
+            FROM cart_items ci
+            JOIN products p ON ci.productId = p.productid
+            WHERE ci.userId = ? AND ci.productId = ?
+            LIMIT 1
+        `;
+        db.query(sql, [userId, productId], (err, rows) => callback(err, rows && rows[0] ? rows[0] : null));
+    },
+
     // Add a product to a user's cart
     add(userId, productId, quantity, callback) {
         const sql = 'INSERT INTO cart_items (userId, productId, quantity) VALUES (?, ?, ?)';
