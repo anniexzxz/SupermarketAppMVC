@@ -1,4 +1,27 @@
 const OrderHistory = require('../models/OrderHistory');
+const Review = require('../models/Review');
+
+// helper to upsert a review in the reviews table based on user + product
+function upsertReview(userId, productId, payload, callback) {
+    Review.getByUserAndProduct(userId, productId, (findErr, existing) => {
+        if (findErr) return callback(findErr);
+
+        const safeRating = Number.isFinite(Number(payload.rating)) ? Number(payload.rating) :
+            (existing && Number.isFinite(Number(existing.rating)) ? Number(existing.rating) : 0);
+        const data = {
+            user_id: userId,
+            product_id: productId,
+            rating: safeRating,
+            review_text: payload.review_text !== undefined ? payload.review_text : (existing ? existing.review_text : ''),
+            review_date: new Date()
+        };
+
+        if (existing) {
+            return Review.update(existing.review_id, data, callback);
+        }
+        return Review.add(data, callback);
+    });
+}
 
 // Function-based OrderHistory controller (Express + EJS render helpers)
 // Each handler delegates to the OrderHistory model and renders simple EJS views or returns JSON fallbacks.
@@ -76,13 +99,34 @@ const OrderHistoryController = {
             return res.redirect('/orderHistory');
         }
 
-        OrderHistory.addReview(id, reviewText, (err) => {
-            if (err) {
-                req.flash('error', 'Failed to save review.');
-            } else {
-                req.flash('success', 'Review submitted.');
+        OrderHistory.getById(id, (orderErr, order) => {
+            if (orderErr || !order) {
+                req.flash('error', 'Order not found.');
+                return res.redirect('/orderHistory');
             }
-            res.redirect('/orderHistory');
+
+            // ensure non-admin users can only review their own orders
+            if (req.session.user && req.session.user.role !== 'admin' && order.userId !== req.session.user.userid) {
+                req.flash('error', 'You cannot review this order.');
+                return res.redirect('/orderHistory');
+            }
+
+            OrderHistory.addReview(id, reviewText, (err) => {
+                if (err) {
+                    req.flash('error', 'Failed to save review.');
+                    return res.redirect('/orderHistory');
+                }
+
+                upsertReview(order.userId, order.productId, { review_text: reviewText }, (revErr) => {
+                    if (revErr) {
+                        console.error(revErr);
+                        req.flash('error', 'Review saved on order, but failed to save in review list.');
+                    } else {
+                        req.flash('success', 'Review submitted.');
+                    }
+                    return res.redirect('/orderHistory');
+                });
+            });
         });
     },
 
@@ -95,13 +139,34 @@ const OrderHistoryController = {
             return res.redirect('/orderHistory');
         }
 
-        OrderHistory.addRating(id, rating, (err) => {
-            if (err) {
-                req.flash('error', 'Failed to save rating.');
-            } else {
-                req.flash('success', 'Rating submitted.');
+        OrderHistory.getById(id, (orderErr, order) => {
+            if (orderErr || !order) {
+                req.flash('error', 'Order not found.');
+                return res.redirect('/orderHistory');
             }
-            res.redirect('/orderHistory');
+
+            // ensure non-admin users can only rate their own orders
+            if (req.session.user && req.session.user.role !== 'admin' && order.userId !== req.session.user.userid) {
+                req.flash('error', 'You cannot rate this order.');
+                return res.redirect('/orderHistory');
+            }
+
+            OrderHistory.addRating(id, rating, (err) => {
+                if (err) {
+                    req.flash('error', 'Failed to save rating.');
+                    return res.redirect('/orderHistory');
+                }
+
+                upsertReview(order.userId, order.productId, { rating }, (revErr) => {
+                    if (revErr) {
+                        console.error(revErr);
+                        req.flash('error', 'Rating saved on order, but failed to save in review list.');
+                    } else {
+                        req.flash('success', 'Rating submitted.');
+                    }
+                    return res.redirect('/orderHistory');
+                });
+            });
         });
     }
 };

@@ -11,6 +11,7 @@ let ProductController;
 let UserController;
 let CartItemController;
 let OrderHistoryController;
+let ReviewController;
 try {
     ProductController = require('./controllers/productControllers');
 } catch (e) {
@@ -31,12 +32,18 @@ try {
 } catch (e) {
     OrderHistoryController = require('./controllers/OrderHistoryController');
 }
+try {
+    ReviewController = require('./controllers/reviewControllers');
+} catch (e) {
+    ReviewController = require('./controllers/ReviewController');
+}
 
 // If a controller wasn't found above this will throw early so errors are obvious
 if (!ProductController) throw new Error('ProductController not found');
 if (!UserController) throw new Error('UserController not found');
 if (!CartItemController) throw new Error('CartItemController not found');
 if (!OrderHistoryController) throw new Error('OrderHistoryController not found');
+if (!ReviewController) throw new Error('ReviewController not found');
 
 const db = require('./db'); // used for authentication (no direct connection code here)
 const CartItemsController = require('./controllers/CartItemController');
@@ -335,6 +342,27 @@ app.post('/orderHistory/:id/review', checkAuthenticated, (req, res, next) => {
 
 app.post('/orderHistory/:id/rate', checkAuthenticated, (req, res, next) => {
     OrderHistoryController.rate(req, res, next);
+});
+
+// Review routes
+app.get('/reviews', checkAuthenticated, (req, res, next) => {
+    ReviewController.list(req, res, next);
+});
+
+app.get('/reviews/:id', checkAuthenticated, (req, res, next) => {
+    ReviewController.show(req, res, next);
+});
+
+app.post('/reviews', checkAuthenticated, (req, res, next) => {
+    ReviewController.create(req, res, next);
+});
+
+app.post('/reviews/:id', checkAuthenticated, (req, res, next) => {
+    ReviewController.update(req, res, next);
+});
+
+app.post('/reviews/:id/delete', checkAuthenticated, (req, res, next) => {
+    ReviewController.delete(req, res, next);
 });
 
 // Fallback: start server

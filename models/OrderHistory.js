@@ -8,7 +8,7 @@ const OrderHistory = {
     getAll(callback) {
         const sql = `
             SELECT oh.orderHistory_id, oh.userId, oh.productId, oh.quantity, oh.price, oh.order_date,
-                   NULL AS review, NULL AS rating,
+                   oh.review, oh.rating,
                    u.username AS userName, u.email AS userEmail,
                    p.productName, p.price AS productPrice, p.image AS productImage
             FROM order_history oh
@@ -23,7 +23,7 @@ const OrderHistory = {
     getById(orderHistoryId, callback) {
         const sql = `
             SELECT oh.orderHistory_id, oh.userId, oh.productId, oh.quantity, oh.price, oh.order_date,
-                   NULL AS review, NULL AS rating,
+                   oh.review, oh.rating,
                    u.username AS userName, u.email AS userEmail,
                    p.productName, p.price AS productPrice, p.image AS productImage
             FROM order_history oh
@@ -68,7 +68,7 @@ const OrderHistory = {
     getByUser(userId, callback) {
         const sql = `
             SELECT oh.orderHistory_id, oh.userId, oh.productId, oh.quantity, oh.price, oh.order_date,
-                   NULL AS review, NULL AS rating,
+                   oh.review, oh.rating,
                    u.username AS userName, u.email AS userEmail,
                    p.productName, p.price AS productPrice, p.image AS productImage
             FROM order_history oh
