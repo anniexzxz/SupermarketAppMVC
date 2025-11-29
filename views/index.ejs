@@ -7,9 +7,13 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <title>Supermarket App</title>
 </head>
-<body>
+<body style="background-color: rgb(172, 95, 27);">
     <%- include('partials/navbar') %>
 
+    <div class="w-100 text-center" style="overflow: hidden; margin-top: 0; margin-bottom: 1.5rem;">
+        <img src="/images/Annie%27s%20Grocery.png" alt="Annie's Grocery" class="img-fluid d-block" style="width: 100vw; height: 50vh; object-fit: cover; margin-left: calc(50% - 50vw);">
+    </div>
+    
     <div class="container">
         <p style="text-align: center;">
             <% if (user) {%>

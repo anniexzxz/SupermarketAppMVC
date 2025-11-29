@@ -16,7 +16,7 @@
     <table class="table table-bordered">
       <thead>
         <tr>
-          <th>Product Name</th>
+          <th>Product</th>
           <th>Quantity</th>
           <th>Amount</th>
         </tr>
@@ -24,7 +24,12 @@
       <tbody>
         <% let total = 0; products.forEach(product => { total += Number(product.amount); %>
           <tr>
-            <td><%= product.productName %></td>
+            <td class="d-flex align-items-center">
+              <% if (product.image) { %>
+                <img src="/images/<%= product.image %>" alt="<%= product.productName %>" class="me-2 rounded" style="width: 60px; height: 60px; object-fit: cover;">
+              <% } %>
+              <span><%= product.productName %></span>
+            </td>
             <td><%= product.quantity %></td>
             <td>$<%= Number(product.amount).toFixed(2) %></td>
           </tr>

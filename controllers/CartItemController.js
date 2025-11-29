@@ -201,6 +201,7 @@ const CartItemController = {
                     const products = cart.map(item => ({
                         productid: item.productId,
                         productName: item.productName,
+                        image: item.image,
                         quantity: Number(item.quantity) || 1,
                         amount: (Number(item.price) || 0) * (Number(item.quantity) || 1)
                     }));
