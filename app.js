@@ -224,6 +224,48 @@ app.post('/login', (req, res) => {
     });
 });
 
+// Forgot password routes
+app.get('/forgetPassword', (req, res, next) => {
+    if (typeof UserController.renderForgetPassword === 'function') {
+        return UserController.renderForgetPassword(req, res, next);
+    }
+    return res.render('forgetPassword', { user: req.session.user || null, messages: req.flash('success'), errors: req.flash('error') });
+});
+
+app.post('/forgetPassword', (req, res, next) => {
+    if (typeof UserController.resetPassword === 'function') {
+        return UserController.resetPassword(req, res, next);
+    }
+
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        req.flash('error', 'Email and new password are required.');
+        return res.redirect('/forgetPassword');
+    }
+
+    if (password.length < 6) {
+        req.flash('error', 'Password should be at least 6 characters long.');
+        return res.redirect('/forgetPassword');
+    }
+
+    db.query('UPDATE users SET password = SHA1(?) WHERE email = ?', [password, email], (err, result) => {
+        if (err) {
+            console.error(err);
+            req.flash('error', 'Failed to reset password. Please try again.');
+            return res.redirect('/forgetPassword');
+        }
+
+        if (!result || result.affectedRows === 0) {
+            req.flash('error', 'No account found with that email.');
+            return res.redirect('/forgetPassword');
+        }
+
+        req.flash('success', 'Password has been reset successfully.');
+        return res.redirect('/login');
+    });
+});
+
 // Add to cart (uses model to fetch product)
 app.post('/add-to-cart/:id', checkAuthenticated, (req, res) => {
     // Reuse cart controller logic so quantities and totals stay consistent

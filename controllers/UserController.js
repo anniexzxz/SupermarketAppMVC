@@ -62,6 +62,42 @@ const UserController = {
             if (err) return res.status(500).render('users', { users: [], error: 'Failed to delete user.' });
             res.redirect('/users');
         });
+    },
+
+    // Render forgot password form
+    renderForgetPassword(req, res) {
+        res.render('forgetPassword', { user: req.session.user || null, messages: req.flash('success'), errors: req.flash('error') });
+    },
+
+    // Handle password reset
+    resetPassword(req, res) {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            req.flash('error', 'Email and new password are required.');
+            return res.redirect('/forgetPassword');
+        }
+
+        if (password.length < 6) {
+            req.flash('error', 'Password should be at least 6 characters long.');
+            return res.redirect('/forgetPassword');
+        }
+
+        User.updatePasswordByEmail(email, password, (err, result) => {
+            if (err) {
+                console.error(err);
+                req.flash('error', 'Failed to reset password. Please try again.');
+                return res.redirect('/forgetPassword');
+            }
+
+            if (!result || result.affectedRows === 0) {
+                req.flash('error', 'No account found with that email.');
+                return res.redirect('/forgetPassword');
+            }
+
+            req.flash('success', 'Password has been reset successfully.');
+            return res.redirect('/login');
+        });
     }
 };
 

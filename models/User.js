@@ -106,6 +106,12 @@ const User = {
             // both roles allowed to view; return true if user exists
             callback(null, true);
         });
+    },
+
+    // Update password by email (used for forgot password flow)
+    updatePasswordByEmail(email, password, callback) {
+        const sql = 'UPDATE users SET password = SHA1(?) WHERE email = ?';
+        db.query(sql, [password, email], (err, result) => callback(err, result));
     }
 };
 
