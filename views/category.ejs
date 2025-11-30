@@ -54,8 +54,8 @@
                   <tr>
                     <td><%= cat.category_name %></td>
                     <td>
-                      <% if (cat.image) { %>
-                        <img src="/images/<%= cat.image %>" alt="<%= cat.category_name %>" style="max-width: 100px; max-height: 70px; object-fit: cover;">
+                      <% if (cat.category_image) { %>
+                        <img src="/images/<%= cat.category_image %>" alt="<%= cat.category_name %>" style="max-width: 100px; max-height: 70px; object-fit: cover;">
                       <% } else { %>
                         <span class="text-muted">No image</span>
                       <% } %>
@@ -89,9 +89,9 @@
         </div>
         <div class="card-body">
           <h5><%= category.category_name %></h5>
-          <% if (category.image) { %>
+          <% if (category.category_image) { %>
             <div class="mb-3">
-              <img src="/images/<%= category.image %>" alt="<%= category.category_name %>" style="max-width: 300px; width: 100%; height: auto; object-fit: cover;">
+              <img src="/images/<%= category.category_image %>" alt="<%= category.category_name %>" style="max-width: 300px; width: 100%; height: auto; object-fit: cover;">
             </div>
           <% } %>
           <p class="mb-1"><strong>Description:</strong> <%= category.description || '-' %></p>
@@ -108,18 +108,19 @@
           <% if (user && user.role === 'admin') { %>
             <hr>
             <h6 class="mb-3">Update Category</h6>
-            <form action="/categories/<%= category.category_id %>" method="POST" class="row g-3 mb-3">
+            <form action="/categories/<%= category.category_id %>" method="POST" enctype="multipart/form-data" class="row g-3 mb-3">
               <div class="col-md-6">
                 <label for="category_name" class="form-label">Name</label>
                 <input type="text" class="form-control" id="category_name" name="category_name" value="<%= category.category_name %>" required>
               </div>
-              <div class="col-md-6">
-                <label for="image" class="form-label">Image filename (stored in /images)</label>
-                <input type="text" class="form-control" id="image" name="image" value="<%= category.image || '' %>" placeholder="e.g. bakery.jpg">
-              </div>
               <div class="col-12">
                 <label for="description" class="form-label">Description</label>
                 <textarea class="form-control" id="description" name="description" rows="3"><%= category.description || '' %></textarea>
+              </div>
+              <div class="col-md-6">
+                <label for="image" class="form-label">Upload image</label>
+                <input type="file" class="form-control" id="image" name="image" accept="image/*">
+                <input type="hidden" name="existing_image" value="<%= category.category_image || '' %>">
               </div>
               <div class="col-12">
                 <button type="submit" class="btn btn-primary">Update</button>
@@ -137,7 +138,7 @@
       <div class="card" id="addCategory">
         <div class="card-header">Add Category</div>
         <div class="card-body">
-          <form action="/categories" method="POST" class="row g-3">
+          <form action="/categories" method="POST" enctype="multipart/form-data" class="row g-3">
             <div class="col-md-6">
               <label for="new_category_name" class="form-label">Name</label>
               <input type="text" class="form-control" id="new_category_name" name="category_name" placeholder="e.g. Beverages" required>
@@ -145,6 +146,10 @@
             <div class="col-12">
               <label for="new_description" class="form-label">Description</label>
               <textarea class="form-control" id="new_description" name="description" rows="3" placeholder="Optional"></textarea>
+            </div>
+            <div class="col-md-6">
+              <label for="new_image" class="form-label">Upload image</label>
+              <input type="file" class="form-control" id="new_image" name="image" accept="image/*">
             </div>
             <div class="col-12">
               <button type="submit" class="btn btn-success">Create</button>

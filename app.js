@@ -152,10 +152,10 @@ app.get('/categories', checkAuthenticated, (req, res, next) => {
 app.get('/categories/:id', checkAuthenticated, (req, res, next) => {
     CategoryController.show(req, res, next);
 });
-app.post('/categories', checkAuthenticated, checkAdmin, (req, res, next) => {
+app.post('/categories', checkAuthenticated, checkAdmin, upload.single('image'), (req, res, next) => {
     CategoryController.create(req, res, next);
 });
-app.post('/categories/:id', checkAuthenticated, checkAdmin, (req, res, next) => {
+app.post('/categories/:id', checkAuthenticated, checkAdmin, upload.single('image'), (req, res, next) => {
     CategoryController.update(req, res, next);
 });
 app.post('/categories/:id/delete', checkAuthenticated, checkAdmin, (req, res, next) => {

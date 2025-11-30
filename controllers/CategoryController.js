@@ -76,9 +76,11 @@ const CategoryController = {
     create(req, res) {
         const user = req.session.user || null;
         const role = user ? user.role : null;
+        const uploadedImage = req.file ? req.file.filename : null;
         const category = {
             category_name: req.body.category_name || req.body.name,
-            description: req.body.description || ''
+            description: req.body.description || '',
+            category_image: uploadedImage || req.body.category_image || req.body.image || null
         };
 
         Category.add(category, role, (err) => {
@@ -96,9 +98,11 @@ const CategoryController = {
         const categoryId = req.params.id;
         const user = req.session.user || null;
         const role = user ? user.role : null;
+        const uploadedImage = req.file ? req.file.filename : null;
         const category = {
             category_name: req.body.category_name || req.body.name,
-            description: req.body.description || ''
+            description: req.body.description || '',
+            category_image: uploadedImage || req.body.category_image || req.body.image || req.body.existing_image || null
         };
 
         Category.update(categoryId, category, role, (err) => {
