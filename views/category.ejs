@@ -116,7 +116,7 @@
       </div>
     <% } %>
 
-    <% if (user && user.role === 'admin') { %>
+    <% if (user && user.role === 'admin' && !category) { %>
       <div class="card" id="addCategory">
         <div class="card-header">Add Category</div>
         <div class="card-body">

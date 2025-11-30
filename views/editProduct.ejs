@@ -14,11 +14,22 @@
         <br>
         <div class="text-center"><h2>Update Product</h2></div>
         <br>
+        <% if (error) { %>
+            <div class="alert alert-danger text-center"><%= error %></div>
+        <% } %>
         <div class="text-center">
           <% if (product) { %> 
             <form action="/editProduct/<%= product.productid %>" method="POST" enctype="multipart/form-data"> 
                 <label for="name">Product Name:</label><br>
                 <input type="text" id="name" name="name" value="<%= product.productName %>" required><br><br>
+
+                <label for="category_id">Category:</label><br>
+                <select id="category_id" name="category_id" required>
+                    <option value="" disabled>Select a category</option>
+                    <% (categories || []).forEach(function(cat) { %>
+                        <option value="<%= cat.category_id %>" <%= product.category_id === cat.category_id ? 'selected' : '' %>><%= cat.category_name %></option>
+                    <% }) %>
+                </select><br><br>
 
                 <label for="quantity">Quantity:</label><br>
                 <input type="number" id="quantity" name="quantity" min="0" step="1" value="<%= product.quantity %>" required><br><br>

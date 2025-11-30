@@ -14,11 +14,24 @@
   <!-- Main Content -->
   <div class="container mt-4">
     <h2 class="text-center mb-4">Add New Product</h2>
+    <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+    <% } %>
     <form action="/addProduct" method="POST" enctype="multipart/form-data" class="mx-auto" style="max-width: 500px;">
 
       <div class="mb-3">
         <label for="name" class="form-label">Product Name</label>
         <input type="text" class="form-control" id="name" name="name" required>
+      </div>
+
+      <div class="mb-3">
+        <label for="category_id" class="form-label">Category</label>
+        <select id="category_id" name="category_id" class="form-select" required>
+          <option value="" disabled selected>Select a category</option>
+          <% (categories || []).forEach(function(cat) { %>
+            <option value="<%= cat.category_id %>"><%= cat.category_name %></option>
+          <% }) %>
+        </select>
       </div>
 
       <div class="mb-3">

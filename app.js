@@ -54,6 +54,7 @@ if (!CategoryController) throw new Error('CategoryController not found');
 
 const db = require('./db'); // used for authentication (no direct connection code here)
 const CartItemsController = require('./controllers/CartItemController');
+const CategoryModel = require('./models/Category');
 
 // Set up multer for file uploads
 const storage = multer.diskStorage({
@@ -130,10 +131,18 @@ app.get('/shopping', checkAuthenticated, (req, res, next) => {
     }
     // fallback: get all products and render shopping
     const Product = require('./models/Product');
-    Product.getAll((err, products) => {
-        if (err) return res.status(500).render('shopping', { user: req.session.user, products: [], error: 'Failed to load products.' });
-        res.render('shopping', { user: req.session.user, products, error: null });
-    });
+    const categoryId = req.query.category ? parseInt(req.query.category, 10) : null;
+
+    const handleRender = (err, products) => {
+        if (err) return res.status(500).render('shopping', { user: req.session.user, products: [], error: 'Failed to load products.', categoryId });
+        res.render('shopping', { user: req.session.user, products, error: null, categoryId });
+    };
+
+    if (!Number.isNaN(categoryId) && categoryId) {
+        return Product.getByCategory(categoryId, handleRender);
+    }
+
+    Product.getAll(handleRender);
 });
 
 // Category routes
@@ -160,7 +169,13 @@ app.get('/product/:id', checkAuthenticated, (req, res, next) => {
 
 // Add product (form)
 app.get('/addProduct', checkAuthenticated, checkAdmin, (req, res) => {
-    res.render('addProduct', { user: req.session.user });
+    const role = req.session.user ? req.session.user.role : null;
+    CategoryModel.getAll(role, (err, categories) => {
+        if (err) {
+            return res.status(500).render('addProduct', { user: req.session.user, categories: [], error: 'Failed to load categories.' });
+        }
+        res.render('addProduct', { user: req.session.user, categories, error: null });
+    });
 });
 
 // Add product (POST) - file upload handled then delegated to controller

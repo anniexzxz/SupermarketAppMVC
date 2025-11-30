@@ -12,9 +12,17 @@
 
   <div class="container">
     <p>Welcome, <%= user.username %> (<%= user.role %>)</p>
-    <br>
-    <div class="text-center"><h2>Products from Supermarket</h2></div>
-    <br>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <div></div>
+      <div class="text-center flex-grow-1"><h2 class="m-0">Products from Supermarket</h2></div>
+      <% if (typeof categoryId !== 'undefined' && categoryId) { %>
+        <div>
+          <a href="/categories" class="btn btn-outline-secondary btn-sm">Back to categories</a>
+        </div>
+      <% } else { %>
+        <div></div>
+      <% } %>
+    </div>
     <table class="table table-hover small text-center">
       <thead>
           <tr>
@@ -22,8 +30,10 @@
             <th width="100">Product Image</th>
             <th width="50">Quantity</th>
             <th width="50">Price</th>
-            <th width="50">Quantity</th>
-            <th width="50">Buy</th>
+            <% if (user.role !== 'admin') { %>
+              <th width="50">Quantity</th>
+              <th width="50">Buy</th>
+            <% } %>
           </tr>
       </thead>
       <tbody>
@@ -33,32 +43,22 @@
             <td><img src = "images/<%= products[i].image %>" width="20%"></td>
             <td><%= products[i].quantity %></td>
             <td>$<%= products[i].price.toFixed(2) %></td>
-            <!-- <td>
-              <select id="role" name="role" class="form-control" >
-                <option value="1" selected >1</option>
-                <option value="2" >2</option>
-                <option value="3" >3</option>
-                <option value="4" >4</option>
-                <option value="5" >5</option>
-              </select>
-            </td> -->
-            <!-- Buy Link -->
-            <!-- <td><a href="/buyProduct/<%#= products[i].id %>" class="btn btn-primary mt-3">Buy</a></td> -->
-            <td>
-              <select class="form-control" onchange="document.getElementById('quantity-<%= products[i].productid %>').value = this.value">
-                <% for (let q = 1; q <= 5; q++) { %>
-                  <option value="<%= q %>"><%= q %></option>
-                <% } %>
-              </select>
-            </td>
+            <% if (user.role !== 'admin') { %>
+              <td>
+                <select class="form-control" onchange="document.getElementById('quantity-<%= products[i].productid %>').value = this.value">
+                  <% for (let q = 1; q <= 5; q++) { %>
+                    <option value="<%= q %>"><%= q %></option>
+                  <% } %>
+                </select>
+              </td>
 
-            <td>
-                <form action="/add-to-cart/<%= products[i].productid %>" method="POST">
-                  <input type="hidden" name="quantity" id="quantity-<%= products[i].productid %>" value="1">
-                  <button type="submit" class="btn btn-primary mt-3">Buy</button>
-                </form>
-            </td>
-
+              <td>
+                  <form action="/add-to-cart/<%= products[i].productid %>" method="POST">
+                    <input type="hidden" name="quantity" id="quantity-<%= products[i].productid %>" value="1">
+                    <button type="submit" class="btn btn-primary mt-3">Buy</button>
+                  </form>
+              </td>
+            <% } %>
           </tr>
         <% } %>
       </tbody>
