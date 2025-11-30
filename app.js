@@ -12,6 +12,7 @@ let UserController;
 let CartItemController;
 let OrderHistoryController;
 let ReviewController;
+let CategoryController;
 try {
     ProductController = require('./controllers/productControllers');
 } catch (e) {
@@ -37,6 +38,11 @@ try {
 } catch (e) {
     ReviewController = require('./controllers/ReviewController');
 }
+try {
+    CategoryController = require('./controllers/categoryControllers');
+} catch (e) {
+    CategoryController = require('./controllers/CategoryController');
+}
 
 // If a controller wasn't found above this will throw early so errors are obvious
 if (!ProductController) throw new Error('ProductController not found');
@@ -44,6 +50,7 @@ if (!UserController) throw new Error('UserController not found');
 if (!CartItemController) throw new Error('CartItemController not found');
 if (!OrderHistoryController) throw new Error('OrderHistoryController not found');
 if (!ReviewController) throw new Error('ReviewController not found');
+if (!CategoryController) throw new Error('CategoryController not found');
 
 const db = require('./db'); // used for authentication (no direct connection code here)
 const CartItemsController = require('./controllers/CartItemController');
@@ -127,6 +134,23 @@ app.get('/shopping', checkAuthenticated, (req, res, next) => {
         if (err) return res.status(500).render('shopping', { user: req.session.user, products: [], error: 'Failed to load products.' });
         res.render('shopping', { user: req.session.user, products, error: null });
     });
+});
+
+// Category routes
+app.get('/categories', checkAuthenticated, (req, res, next) => {
+    CategoryController.list(req, res, next);
+});
+app.get('/categories/:id', checkAuthenticated, (req, res, next) => {
+    CategoryController.show(req, res, next);
+});
+app.post('/categories', checkAuthenticated, checkAdmin, (req, res, next) => {
+    CategoryController.create(req, res, next);
+});
+app.post('/categories/:id', checkAuthenticated, checkAdmin, (req, res, next) => {
+    CategoryController.update(req, res, next);
+});
+app.post('/categories/:id/delete', checkAuthenticated, checkAdmin, (req, res, next) => {
+    CategoryController.delete(req, res, next);
 });
 
 // View single product (used by both roles)
