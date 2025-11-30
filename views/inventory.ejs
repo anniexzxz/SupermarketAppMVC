@@ -12,9 +12,14 @@
 
   <div class="container">
     <p>Welcome, <%= user.username %> (<%= user.role %>)</p>
-    <br>
-    <div class="text-center"><h2>Products from Supermarket App Database</h2></div>
-    <br>
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3">
+      <h2 class="mb-3 mb-md-0 text-center text-md-start w-100">Products from Supermarket App Database</h2>
+      <form class="d-flex w-100 w-md-auto" action="/search/results" method="GET" role="search">
+        <input class="form-control me-2" type="search" name="q" placeholder="Search products..." aria-label="Search">
+        <button class="btn btn-outline-primary" type="submit">Search</button>
+      </form>
+    </div>
+
     <table class="table table-hover small text-center">
       <thead>
           <tr>

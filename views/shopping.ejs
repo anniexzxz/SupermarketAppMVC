@@ -12,15 +12,18 @@
 
   <div class="container">
     <p>Welcome, <%= user.username %> (<%= user.role %>)</p>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <div></div>
-      <div class="text-center flex-grow-1"><h2 class="m-0">Products from Supermarket</h2></div>
+    <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center mb-3 gap-2">
+      <div class="flex-grow-1">
+        <h2 class="m-0 text-center text-lg-start">Products from Supermarket</h2>
+      </div>
+      <form class="d-flex w-100 w-lg-auto" action="/search/results" method="GET" role="search">
+        <input class="form-control me-2" type="search" name="q" placeholder="Search products..." aria-label="Search">
+        <button class="btn btn-outline-primary" type="submit">Search</button>
+      </form>
       <% if (typeof categoryId !== 'undefined' && categoryId) { %>
         <div>
           <a href="/categories" class="btn btn-outline-secondary btn-sm">Back to categories</a>
         </div>
-      <% } else { %>
-        <div></div>
       <% } %>
     </div>
     <table class="table table-hover small text-center">

@@ -13,6 +13,7 @@ let CartItemController;
 let OrderHistoryController;
 let ReviewController;
 let CategoryController;
+let SearchRouter;
 try {
     ProductController = require('./controllers/productControllers');
 } catch (e) {
@@ -43,6 +44,11 @@ try {
 } catch (e) {
     CategoryController = require('./controllers/CategoryController');
 }
+try {
+    SearchRouter = require('./routes/search');
+} catch (e) {
+    SearchRouter = null;
+}
 
 // If a controller wasn't found above this will throw early so errors are obvious
 if (!ProductController) throw new Error('ProductController not found');
@@ -51,6 +57,7 @@ if (!CartItemController) throw new Error('CartItemController not found');
 if (!OrderHistoryController) throw new Error('OrderHistoryController not found');
 if (!ReviewController) throw new Error('ReviewController not found');
 if (!CategoryController) throw new Error('CategoryController not found');
+if (!SearchRouter) throw new Error('Search routes not found');
 
 const db = require('./db'); // used for authentication (no direct connection code here)
 const CartItemsController = require('./controllers/CartItemController');
@@ -73,6 +80,7 @@ app.set('view engine', 'ejs');
 app.use(express.static('public'));
 // enable form processing
 app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
 // Session & flash
 app.use(session({
@@ -161,6 +169,9 @@ app.post('/categories/:id', checkAuthenticated, checkAdmin, upload.single('image
 app.post('/categories/:id/delete', checkAuthenticated, checkAdmin, (req, res, next) => {
     CategoryController.delete(req, res, next);
 });
+
+// Search routes (GET/POST /search/results)
+app.use('/search', SearchRouter);
 
 // View single product (used by both roles)
 app.get('/product/:id', checkAuthenticated, (req, res, next) => {
