@@ -14,6 +14,7 @@ let OrderHistoryController;
 let ReviewController;
 let CategoryController;
 let SearchRouter;
+let ContactUsController;
 try {
     ProductController = require('./controllers/productControllers');
 } catch (e) {
@@ -45,6 +46,11 @@ try {
     CategoryController = require('./controllers/CategoryController');
 }
 try {
+    ContactUsController = require('./controllers/ContactUsController');
+} catch (e) {
+    ContactUsController = null;
+}
+try {
     SearchRouter = require('./routes/search');
 } catch (e) {
     SearchRouter = null;
@@ -58,6 +64,7 @@ if (!OrderHistoryController) throw new Error('OrderHistoryController not found')
 if (!ReviewController) throw new Error('ReviewController not found');
 if (!CategoryController) throw new Error('CategoryController not found');
 if (!SearchRouter) throw new Error('Search routes not found');
+if (!ContactUsController) throw new Error('ContactUsController not found');
 
 const db = require('./db'); // used for authentication (no direct connection code here)
 const CartItemsController = require('./controllers/CartItemController');
@@ -172,6 +179,13 @@ app.post('/categories/:id/delete', checkAuthenticated, checkAdmin, (req, res, ne
 
 // Search routes (GET/POST /search/results)
 app.use('/search', SearchRouter);
+
+// Contact Us routes
+app.get('/contact', (req, res, next) => ContactUsController.list(req, res, next));
+app.get('/contact/:id', (req, res, next) => ContactUsController.show(req, res, next));
+app.post('/contact', (req, res, next) => ContactUsController.create(req, res, next));
+app.post('/contact/:id', (req, res, next) => ContactUsController.update(req, res, next));
+app.post('/contact/:id/delete', (req, res, next) => ContactUsController.delete(req, res, next));
 
 // View single product (used by both roles)
 app.get('/product/:id', checkAuthenticated, (req, res, next) => {
