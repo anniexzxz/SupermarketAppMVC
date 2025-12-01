@@ -59,7 +59,16 @@ const ProductController = {
 
         Product.create(product, (err, result) => {
             if (err) {
-                return res.status(500).render('addProduct', { product, error: 'Failed to add product.', user: req.session.user });
+                console.error('Product create failed:', err);
+                const role = req.session.user ? req.session.user.role : null;
+                return Category.getAll(role, (catErr, categories) => {
+                    return res.status(500).render('addProduct', {
+                        product,
+                        categories: catErr ? [] : categories,
+                        error: 'Failed to add product.',
+                        user: req.session.user
+                    });
+                });
             }
             res.redirect('/inventory');
         });

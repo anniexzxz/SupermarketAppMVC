@@ -19,9 +19,53 @@ const Product = {
 
     // Add a new product – product: { productName, quantity, price, image, category_id }
     create(product, callback) {
-        const sql = 'INSERT INTO products (productName, quantity, price, image, category_id) VALUES (?, ?, ?, ?, ?)';
-        const params = [product.productName, product.quantity, product.price, product.image, product.category_id || null];
-        db.query(sql, params, (err, result) => callback(err, result));
+        // Some schemas lack AUTO_INCREMENT on productid. Compute the next ID explicitly, then insert.
+        const getNextId = (cb) => {
+            db.query('SELECT COALESCE(MAX(productid), 0) + 1 AS nextId FROM products', (err, rows) => {
+                if (err) return cb(err);
+                const nextId = rows && rows[0] && rows[0].nextId ? rows[0].nextId : 1;
+                cb(null, nextId);
+            });
+        };
+
+        const insertWithUser = (nextId, cb) => {
+            const sql = 'INSERT INTO products (productid, productName, quantity, price, image, category_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)';
+            const params = [
+                nextId,
+                product.productName,
+                product.quantity,
+                product.price,
+                product.image,
+                product.category_id || null,
+                product.user_id || null
+            ];
+            db.query(sql, params, cb);
+        };
+
+        const insertWithoutUser = (nextId, cb) => {
+            const sql = 'INSERT INTO products (productid, productName, quantity, price, image, category_id) VALUES (?, ?, ?, ?, ?, ?)';
+            const params = [
+                nextId,
+                product.productName,
+                product.quantity,
+                product.price,
+                product.image,
+                product.category_id || null
+            ];
+            db.query(sql, params, cb);
+        };
+
+        getNextId((idErr, nextId) => {
+            if (idErr) return callback(idErr);
+
+            insertWithUser(nextId, (err, result) => {
+                if (err && (err.code === 'ER_BAD_FIELD_ERROR' || (err.message && err.message.includes('user_id')))) {
+                    // DB has no user_id column; retry without it.
+                    return insertWithoutUser(nextId, callback);
+                }
+                return callback(err, result);
+            });
+        });
     },
 
     // Update an existing product by ID – product: { productName, quantity, price, image, category_id }

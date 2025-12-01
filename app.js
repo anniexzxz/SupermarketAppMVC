@@ -76,6 +76,7 @@ const storage = multer.diskStorage({
         cb(null, path.join(__dirname, 'public', 'images')); // Directory to save uploaded files
     },
     filename: (req, file, cb) => {
+        // Keep the original filename as requested by the user
         cb(null, file.originalname);
     }
 });
