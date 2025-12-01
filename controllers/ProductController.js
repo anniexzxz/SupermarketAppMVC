@@ -1,6 +1,17 @@
 // ...existing code...
+const fs = require('fs');
+const path = require('path');
 const Product = require('../models/Product');
 const Category = require('../models/Category');
+
+const getImages = () => {
+    try {
+        const dir = path.join(__dirname, '..', 'public', 'images');
+        return fs.readdirSync(dir).filter(name => /\.(png|jpe?g|gif|webp)$/i.test(name));
+    } catch (e) {
+        return [];
+    }
+};
 
 const ProductController = {
     // Get all products (renders inventory.ejs)
@@ -27,14 +38,14 @@ const ProductController = {
         const role = req.session.user ? req.session.user.role : null;
 
         Product.getById(productid, (err, product) => {
-            if (err) return res.status(500).render('editProduct', { product: null, categories: [], error: 'Failed to load product.', user: req.session.user });
-            if (!product) return res.status(404).render('editProduct', { product: null, categories: [], error: 'Product not found.', user: req.session.user });
+            if (err) return res.status(500).render('editProduct', { product: null, categories: [], images: getImages(), error: 'Failed to load product.', user: req.session.user });
+            if (!product) return res.status(404).render('editProduct', { product: null, categories: [], images: getImages(), error: 'Product not found.', user: req.session.user });
 
             Category.getAll(role, (catErr, categories) => {
                 if (catErr) {
-                    return res.status(500).render('editProduct', { product, categories: [], error: 'Failed to load categories.', user: req.session.user });
+                    return res.status(500).render('editProduct', { product, categories: [], images: getImages(), error: 'Failed to load categories.', user: req.session.user });
                 }
-                res.render('editProduct', { product, categories, error: null, user: req.session.user });
+                res.render('editProduct', { product, categories, images: getImages(), error: null, user: req.session.user });
             });
         });
     },
@@ -45,7 +56,8 @@ const ProductController = {
         const productName = req.body.productName || req.body.name || '';
         const quantity = parseInt(req.body.quantity, 10);
         const price = parseFloat(req.body.price);
-        const image = req.file ? req.file.filename : (req.body.image || req.body.currentImage || '');
+        const existingImage = (req.body.existingImage || '').trim();
+        const image = req.file ? req.file.filename : (existingImage || req.body.image || req.body.currentImage || '');
         const categoryId = req.body.category_id ? parseInt(req.body.category_id, 10) : null;
 
         const product = {
@@ -65,6 +77,7 @@ const ProductController = {
                     return res.status(500).render('addProduct', {
                         product,
                         categories: catErr ? [] : categories,
+                        images: getImages(),
                         error: 'Failed to add product.',
                         user: req.session.user
                     });
@@ -81,13 +94,14 @@ const ProductController = {
         const quantity = parseInt(req.body.quantity, 10);
         const price = parseFloat(req.body.price);
         const currentImage = req.body.currentImage || '';
+        const existingImage = (req.body.existingImage || '').trim();
         const uploadedImage = req.file ? req.file.filename : (req.body.image || '').trim();
         const categoryId = req.body.category_id ? parseInt(req.body.category_id, 10) : null;
         const product = {
             productName,
             quantity: Number.isNaN(quantity) ? 0 : quantity,
             price: Number.isNaN(price) ? 0 : price,
-            image: uploadedImage || currentImage,
+            image: uploadedImage || existingImage || currentImage,
             category_id: Number.isNaN(categoryId) ? null : categoryId
         };
 
@@ -97,7 +111,7 @@ const ProductController = {
 
             updater.call(Product, productid, finalProduct, (err, result) => {
                 if (err) {
-                    return res.status(500).render('updateProduct', { product: Object.assign({ productid }, finalProduct), error: 'Failed to update product.', user: req.session.user });
+                    return res.status(500).render('updateProduct', { product: Object.assign({ productid }, finalProduct), images: getImages(), error: 'Failed to update product.', user: req.session.user });
                 }
                 res.redirect('/inventory');
             });
@@ -107,7 +121,7 @@ const ProductController = {
         if (!product.image) {
             return Product.getById(productid, (err, existing) => {
                 if (err || !existing) {
-                    return res.status(500).render('updateProduct', { product: Object.assign({ productid }, product), error: 'Failed to load product image.', user: req.session.user });
+                    return res.status(500).render('updateProduct', { product: Object.assign({ productid }, product), images: getImages(), error: 'Failed to load product image.', user: req.session.user });
                 }
                 proceedUpdate(Object.assign({}, product, { image: existing.image }));
             });

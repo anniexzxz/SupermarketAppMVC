@@ -3,6 +3,7 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 
@@ -81,6 +82,16 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
+
+// Helper to list existing images for selection in forms
+const listImages = () => {
+    try {
+        return fs.readdirSync(path.join(__dirname, 'public', 'images'))
+            .filter(name => /\.(png|jpe?g|gif|webp)$/i.test(name));
+    } catch (e) {
+        return [];
+    }
+};
 
 // Set up view engine
 app.set('view engine', 'ejs');
@@ -198,9 +209,9 @@ app.get('/addProduct', checkAuthenticated, checkAdmin, (req, res) => {
     const role = req.session.user ? req.session.user.role : null;
     CategoryModel.getAll(role, (err, categories) => {
         if (err) {
-            return res.status(500).render('addProduct', { user: req.session.user, categories: [], error: 'Failed to load categories.' });
+            return res.status(500).render('addProduct', { user: req.session.user, categories: [], images: listImages(), error: 'Failed to load categories.' });
         }
-        res.render('addProduct', { user: req.session.user, categories, error: null });
+        res.render('addProduct', { user: req.session.user, categories, images: listImages(), error: null });
     });
 });
 

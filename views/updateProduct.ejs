@@ -39,6 +39,17 @@
           <img src="/images/<%= product.image %>" class="img-thumbnail mt-2" style="width: 150px;">
         </div>
 
+        <div class="mb-3">
+          <label for="existingImage" class="form-label">Choose Existing Image (optional)</label>
+          <select id="existingImage" name="existingImage" class="form-select">
+            <option value="">-- Keep current / upload new --</option>
+            <% (images || []).forEach(function(img) { %>
+              <option value="<%= img %>" <%= product.image === img ? 'selected' : '' %>><%= img %></option>
+            <% }) %>
+          </select>
+          <div class="form-text">Uploading a new file below will override this selection.</div>
+        </div>
+
         <div class="mb-4">
           <label for="image" class="form-label">Upload New Image</label>
           <input class="form-control" type="file" id="image" name="image" accept="image/*">
