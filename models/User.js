@@ -26,8 +26,16 @@ const User = {
 
     // Update an existing user by ID — user: { username, email, password, address, contact, role }
     update(userid, user, callback) {
-        const sql = 'UPDATE users SET username = ?, email = ?, password = SHA1(?), address = ?, contact = ?, role = ? WHERE userid = ?';
-        const params = [user.username, user.email, user.password, user.address || '', user.contact || '', user.role || 'user', userid];
+        const hasPassword = user.password && String(user.password).trim().length > 0;
+
+        if (hasPassword) {
+            const sql = 'UPDATE users SET username = ?, email = ?, password = SHA1(?), address = ?, contact = ?, role = ? WHERE userid = ?';
+            const params = [user.username, user.email, user.password, user.address || '', user.contact || '', user.role || 'user', userid];
+            return db.query(sql, params, (err, result) => callback(err, result));
+        }
+
+        const sql = 'UPDATE users SET username = ?, email = ?, address = ?, contact = ?, role = ? WHERE userid = ?';
+        const params = [user.username, user.email, user.address || '', user.contact || '', user.role || 'user', userid];
         db.query(sql, params, (err, result) => callback(err, result));
     },
 

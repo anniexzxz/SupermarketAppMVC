@@ -2,21 +2,76 @@
 const User = require('../models/User');
 
 const UserController = {
-    // List all users (renders users.ejs)
+    // List all users (renders viewUser.ejs)
     list(req, res) {
+        const currentUser = req.session.user || null;
+        const selectedId = req.query.selected;
+        const messages = req.flash ? req.flash('success') : [];
+        const errors = req.flash ? req.flash('error') : [];
+
+        const renderPage = (status, data = {}) => {
+            const { users = [], selectedUser = null, error = null } = data;
+            res.status(status).render('viewUser', {
+                user: currentUser,
+                users,
+                selectedUser,
+                error,
+                messages,
+                errors
+            });
+        };
+
         User.getAll((err, users) => {
-            if (err) return res.status(500).render('users', { users: [], error: 'Failed to load users.' });
-            res.render('users', { users, error: null });
+            if (err) return renderPage(500, { error: 'Failed to load users.' });
+
+            if (selectedId) {
+                return User.getById(selectedId, (detailErr, selectedUser) => {
+                    if (detailErr) return renderPage(500, { users, error: 'Failed to load selected user.' });
+                    if (!selectedUser) return renderPage(404, { users, error: 'Selected user not found.' });
+                    return renderPage(200, { users, selectedUser });
+                });
+            }
+
+            renderPage(200, { users });
         });
     },
 
-    // Show a single user by ID (renders user.ejs)
+    // Show a single user by ID (renders viewUser.ejs with selection)
     show(req, res) {
         const userid = req.params.id;
-        User.getById(userid, (err, user) => {
-            if (err) return res.status(500).render('user', { user: null, error: 'Failed to load user.' });
-            if (!user) return res.status(404).render('user', { user: null, error: 'User not found.' });
-            res.render('user', { user, error: null });
+        const currentUser = req.session.user || null;
+        const isAdmin = currentUser && currentUser.role === 'admin';
+        const messages = req.flash ? req.flash('success') : [];
+        const errors = req.flash ? req.flash('error') : [];
+
+        if (!isAdmin && (!currentUser || String(currentUser.userid) !== String(userid))) {
+            if (req.flash) req.flash('error', 'Access denied');
+            return res.redirect('/shopping');
+        }
+
+        const renderPage = (status, users, selectedUser, error = null) => {
+            res.status(status).render('viewUser', {
+                user: currentUser,
+                users,
+                selectedUser,
+                error,
+                messages,
+                errors
+            });
+        };
+
+        User.getById(userid, (err, selectedUser) => {
+            if (err) return renderPage(500, [], null, 'Failed to load user.');
+            if (!selectedUser) return renderPage(404, [], null, 'User not found.');
+
+            if (isAdmin) {
+                return User.getAll((listErr, users) => {
+                    if (listErr) return renderPage(500, [], selectedUser, 'Failed to load users.');
+                    return renderPage(200, users, selectedUser);
+                });
+            }
+
+            return renderPage(200, [], selectedUser);
         });
     },
 
@@ -25,14 +80,18 @@ const UserController = {
         const user = {
             username: req.body.username,
             email: req.body.email,
-            password: req.body.password,
             address: req.body.address || '',
             contact: req.body.contact || '',
-            role: req.body.role || 'user'
+            role: req.body.role || 'user',
+            password: req.body.password && req.body.password.trim() ? req.body.password : null
         };
 
         User.create(user, (err, result) => {
-            if (err) return res.status(500).render('addUser', { user, error: 'Failed to add user.' });
+            if (err) {
+                if (req.flash) req.flash('error', 'Failed to add user.');
+                return res.redirect('/users');
+            }
+            if (req.flash) req.flash('success', 'User created.');
             res.redirect('/users');
         });
     },
@@ -50,8 +109,12 @@ const UserController = {
         };
 
         User.update(userid, user, (err, result) => {
-            if (err) return res.status(500).render('editUser', { user: Object.assign({ id: userid }, user), error: 'Failed to update user.' });
-            res.redirect('/users');
+            if (err) {
+                if (req.flash) req.flash('error', 'Failed to update user.');
+                return res.redirect(`/users?selected=${userid}`);
+            }
+            if (req.flash) req.flash('success', 'User updated.');
+            res.redirect(`/users?selected=${userid}`);
         });
     },
 
@@ -59,7 +122,11 @@ const UserController = {
     delete(req, res) {
         const userid = req.params.id;
         User.delete(userid, (err, result) => {
-            if (err) return res.status(500).render('users', { users: [], error: 'Failed to delete user.' });
+            if (err) {
+                if (req.flash) req.flash('error', 'Failed to delete user.');
+                return res.redirect('/users');
+            }
+            if (req.flash) req.flash('success', 'User deleted.');
             res.redirect('/users');
         });
     },
